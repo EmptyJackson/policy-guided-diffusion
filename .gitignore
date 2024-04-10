@@ -1,0 +1,13 @@
+tmp/
+wandb/
+res/
+sweeps/
+docker/wandb_key
+
+.idea
+__pycache__/
+*.DS_Store
+
+# Pyenv
+.python-version
+
