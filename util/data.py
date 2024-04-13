@@ -87,29 +87,20 @@ def unnormalise_traj(trajectories, stats):
 def construct_rollout(
     denoised_traj,
     denoiser_norm_stats,
-    normalize_reward,
     obs_dim,
     action_dim,
 ):
     rollout = unstack_transitions(denoised_traj, obs_dim, action_dim)
-    obs = unnormalise_traj(rollout.obs, denoiser_norm_stats["obs"])
-    action = unnormalise_traj(rollout.action, denoiser_norm_stats["action"])
-    action = jnp.tanh(action)
-    reward = rollout.reward
-    if not normalize_reward:
-        unnormalise_traj(rollout.reward, denoiser_norm_stats["reward"])
+    action = jnp.tanh(unnormalise_traj(rollout.action, denoiser_norm_stats["action"]))
     done = unnormalise_traj(rollout.done, denoiser_norm_stats["done"])
     done = jnp.greater(done, 0.5).astype(jnp.float32)
-    return (
-        Transition(
-            obs=obs,
-            action=action,
-            reward=reward,
-            done=done,
-            next_obs=unnormalise_traj(rollout.next_obs, denoiser_norm_stats["obs"]),
-            value=None,
-            log_prob=None,
-            info=None,
-        ),
-        obs[-1],
+    return Transition(
+        obs=unnormalise_traj(rollout.obs, denoiser_norm_stats["obs"]),
+        action=action,
+        reward=unnormalise_traj(rollout.reward, denoiser_norm_stats["reward"]),
+        done=done,
+        next_obs=unnormalise_traj(rollout.next_obs, denoiser_norm_stats["obs"]),
+        value=None,
+        log_prob=None,
+        info=None,
     )

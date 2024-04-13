@@ -46,7 +46,6 @@ class SyntheticRolloutGenerator(DatasetRolloutGenerator):
         self.diffusion_sample_fn = partial(
             make_sample_fn(
                 self.denoiser_config,
-                args.normalize_reward,
                 args.normalize_action_guidance,
                 args.denoised_guidance,
                 det_guidance,
@@ -65,17 +64,16 @@ class SyntheticRolloutGenerator(DatasetRolloutGenerator):
         # Generate unguided synthetic dataset
         self.update_synthetic_dataset(rng, None)
         if batch_size is None:
-            batch_size = args.offline_batch_size
+            batch_size = args.batch_size
         super().__init__(self._dataset, batch_size)
 
     def set_apply_fn(self, agent_apply_fn):
         self.agent_apply_fn = agent_apply_fn
 
     def _generate_single_rollout(self, rng, agent_params):
-        rollout, last_obs = self.diffusion_sample_fn(
+        return self.diffusion_sample_fn(
             rng=rng, agent_params=agent_params, agent_apply_fn=self.agent_apply_fn
         )
-        return rollout
 
     def update_synthetic_dataset(self, rng, agent_params=None):
         # Regenerate synthetic dataset from the current agent state
@@ -165,9 +163,9 @@ class MixedRolloutGenerator:
         self.obs_shape = obs_shape
         self.action_dim = action_dim
         self.action_lims = action_lims
-        assert 0 < args.synth_batch_size <= args.offline_batch_size
+        assert 0 < args.synth_batch_size <= args.batch_size
         self.synth_batch_size = args.synth_batch_size
-        self.real_batch_size = args.offline_batch_size - self.synth_batch_size
+        self.real_batch_size = args.batch_size - self.synth_batch_size
         self.synth_batch_lifetime = args.synth_batch_lifetime
         assert self.synth_batch_size % self.synth_batch_lifetime == 0
         self.synth_batch_size = self.synth_batch_size // self.synth_batch_lifetime
@@ -217,17 +215,14 @@ class MixedRolloutGenerator:
             self.real_rollout_gen.set_apply_fn(agent_apply_fn)
 
     def batch_rollout(self, rng):
-        rng = jax.random.split(rng[0], self.synth_batch_lifetime + 1)
         flattened_batches = []
         for i in range(self.synth_batch_lifetime):
-            flattened_synth_batch = self.synth_rollout_gens[i].batch_rollout(
-                rng[i : i + 1]
-            )
+            rng, _rng = jax.random.split(rng)
+            flattened_synth_batch = self.synth_rollout_gens[i].batch_rollout(_rng)
             flattened_batches.append(flattened_synth_batch)
         if self.real_batch_size > 0:
-            flattened_real_batch = self.real_rollout_gen.batch_rollout(
-                rng[self.synth_batch_lifetime : self.synth_batch_lifetime + 1]
-            )
+            rng, _rng = jax.random.split(rng)
+            flattened_real_batch = self.real_rollout_gen.batch_rollout(_rng)
             flattened_batches.append(flattened_real_batch)
         traj_batch = jax.tree_map(
             lambda *x: jnp.concatenate([batch for batch in x], axis=-2),

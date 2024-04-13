@@ -28,7 +28,7 @@ def make_train(args):
                 env.action_lims,
                 args.num_rollout_steps,
             )
-        elif args.offline:
+        else:
             # --- Initialize dataset sampler ---
             rollout_gen = OfflineRolloutGenerator(
                 args,
@@ -48,8 +48,8 @@ def make_train(args):
             obs_stats=rollout_gen.obs_stats if args.normalize_obs else None,
         )
         if isinstance(network, dict):
-            network = network["train"]
             eval_apply_fn = network["eval"].apply
+            network = network["train"]
         else:
             eval_apply_fn = network.apply
 
@@ -59,16 +59,16 @@ def make_train(args):
             _rng, network, args, rollout_gen.obs_shape
         )
         if aux_networks is None:
-            return train_state, aux_train_states, network, aux_networks, eval_apply_fn
+            return train_state, None, network, aux_networks, eval_apply_fn
 
         # --- Create auxiliary train states ---
         aux_train_states = []
         for net in aux_networks:
             rng, _rng = jax.random.split(rng)
-            train_state = create_agent_train_state(
+            ts = create_agent_train_state(
                 _rng, net, args, rollout_gen.obs_shape, rollout_gen.action_dim
             )
-            aux_train_states.append(train_state)
+            aux_train_states.append(ts)
         aux_train_states = tuple(aux_train_states)
         return train_state, aux_train_states, network, aux_networks, eval_apply_fn
 
@@ -90,14 +90,11 @@ def make_train(args):
         env.set_apply_fn(jax.jit(eval_apply_fn))
         _agent_train_step_fn = jax.jit(make_train_step(args, network, aux_networks))
 
-        # --- Configure train loop ---
         losses, metrics = [], []
         for step_idx in range(args.num_train_steps):
-            # --- Sample batch ---
+            # --- Sample batch and update agent ---
             rng, _rng = jax.random.split(rng)
-            traj_batch = rollout_gen.batch_rollout(_rng, train_state)
-
-            # --- Update agent ---
+            traj_batch = rollout_gen.batch_rollout(_rng)
             rng, _rng = jax.random.split(rng)
             train_state, aux_train_states, loss, metric = _agent_train_step_fn(
                 train_state, aux_train_states, traj_batch, _rng
@@ -119,11 +116,10 @@ def make_train(args):
                     "returned_episode_returns": jnp.nanmean(
                         info["returned_episode_returns"]
                     ),
-                }
-                if "returned_episode_scores" in info.keys():
-                    metric["returned_episode_scores"] = jnp.nanmean(
+                    "returned_episode_scores": jnp.nanmean(
                         info["returned_episode_scores"]
-                    )
+                    ),
+                }
                 metrics.append(metric)
 
             # --- Regenerate synthetic dataset (if not finished) ---
@@ -134,7 +130,7 @@ def make_train(args):
             ):
                 rng, _rng = jax.random.split(rng)
                 rollout_gen.update_synthetic_dataset(_rng, train_state.params)
-        return metric, loss
+        return metrics, losses
 
     return train
 
@@ -147,8 +143,9 @@ def train_agents(args):
     metric, loss = train_fn(rng)
     if args.log:
         # --- Compute mean return and score per step ---
-        returns = [jnp.nanmean(r) for r in metric["returned_episode_returns"]]
-        scores = [jnp.nanmean(s) for s in metric["returned_episode_scores"]]
+        returns = [met["returned_episode_returns"] for met in metric]
+        scores = [met["returned_episode_scores"] for met in metric]
+        num_updates = [met["num_updates"] for met in metric]
 
         # --- Subsample steps for logging ---
         if len(returns) > MAX_LOG_STEPS:
@@ -159,14 +156,13 @@ def train_agents(args):
         # --- Log step metrics ---
         for step in steps:
             # Log nearest step with return value
-            log_dict = {
+            log({
                 "episode_return": returns[step],
                 "episode_score": scores[step],
                 "step": step,
-                "num_updates": metric["num_updates"][step],
-                **{k: v[step * args.eval_rate].mean() for k, v in loss.items()},
-            }
-            log({k: v for k, v in log_dict.items() if not jnp.isnan(v)})
+                "num_updates": num_updates[step],
+                **loss[step * args.eval_rate],
+            })
 
 
 def main(cmd_args=sys.argv[1:]):
@@ -178,7 +174,7 @@ def main(cmd_args=sys.argv[1:]):
             project=args.wandb_project,
             entity=args.wandb_team,
             group=args.wandb_group,
-            job_type="train_diffusion",
+            job_type="train_agent",
         )
 
     debug = args.debug

@@ -36,8 +36,8 @@ class GymRolloutWrapper:
 
     def batch_reset(self, rng, num_env_workers):
         """Reset a single environment over a batch of seeds."""
-        seeds = jax.random.randint(rng, num_env_workers)
-        reset_obs = self.env.reset(seed=[int(i) for i in seeds])
+        seeds = jax.random.split(rng, num_env_workers)
+        reset_obs = self.env.reset(seed=[int(i[0]) for i in seeds])
         if self.convert_dict_obs:
             reset_obs = stack_dict_obs(reset_obs)
         return reset_obs
@@ -45,8 +45,10 @@ class GymRolloutWrapper:
     def batch_rollout(self, rng, agent_state, last_obs):
         """Evaluate an agent on a single environment over a batch of seeds and environment states."""
 
+        @jax.jit
         @jax.vmap
         def _policy_step(rng, obs):
+            # --- Compute next action for a single state ---
             pi = self.agent_apply_fn(agent_state.params, obs)
             rng, _rng = jax.random.split(rng)
             action, log_prob = pi.sample_and_log_prob(seed=_rng)
@@ -56,10 +58,12 @@ class GymRolloutWrapper:
             return rng, action, log_prob
 
         transition_list = []
-        returned = [False for _ in range(obs.shape[0])]
+        num_env_workers = last_obs.shape[0]
+        rng = jax.random.split(rng, num_env_workers)
+        returned = [False for _ in range(num_env_workers)]
         for _ in range(self.num_env_steps):
             # --- Take step in environment ---
-            rng, action, log_prob = jax.jit(_policy_step)(rng, jnp.array(last_obs))
+            rng, action, log_prob = _policy_step(rng, jnp.array(last_obs))
             obs, reward, done, info = self.env.step(onp.array(action))
             if self.convert_dict_obs:
                 obs = stack_dict_obs(obs)
@@ -97,6 +101,7 @@ class GymRolloutWrapper:
                     info=info,
                 )
             )
+            last_obs = obs
         return tree_stack(transition_list)
 
     @property

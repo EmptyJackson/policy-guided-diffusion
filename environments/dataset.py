@@ -31,8 +31,7 @@ def _load_d4rl_data(args):
     import d4rl
 
     # --- Load data and convert to Jax Numpy ---
-    dataset = gym.make(args.offline_dataset_fname).get_dataset()
-    # dataset = d4rl.qlearning_dataset(gym.make(args.offline_dataset_fname))
+    dataset = gym.make(args.dataset_name).get_dataset()
     trajs = {
         attr: dataset[attr][:-1]
         for attr in ["observations", "actions", "rewards", "terminals", "timeouts"]
@@ -59,7 +58,7 @@ def _load_dataset(args, val_split=0.0):
     Episodes are concatenated together,
     then split into args.trajectory_length around done flags.
     """
-    print(f"Loading D4RL dataset {args.offline_dataset_fname}", end="...")
+    print(f"Loading D4RL dataset {args.dataset_name}", end="...")
 
     # --- Load training and validation episodes ---
     eps = _load_d4rl_data(args)
@@ -92,45 +91,50 @@ def _load_dataset(args, val_split=0.0):
         Subtrajectories never reset at intermediate steps, or timeout at
         any step (done flag corresponds to terminal only).
         """
-        # --- Concatenate episodes and find global episode start indices ---
-        print("Assembling dataset", end="...")
-        flat_done = jnp.concatenate([ep["done"] for ep in eps], axis=0)
-        done_idxs = jnp.argwhere(flat_done).squeeze(axis=-1)
-        if done_idxs[-1] == len(flat_done) - 1:
-            done_idxs = done_idxs[:-1]
-        init_idxs = jnp.concatenate([jnp.zeros(1), done_idxs + 1], axis=0)
+        if args.trajectory_length > 1:
+            # --- Concatenate episodes and find global episode start indices ---
+            print("Assembling dataset", end="...")
+            flat_done = jnp.concatenate([ep["done"] for ep in eps], axis=0)
+            done_idxs = jnp.argwhere(flat_done).squeeze(axis=-1)
+            if done_idxs[-1] == len(flat_done) - 1:
+                done_idxs = done_idxs[:-1]
+            init_idxs = jnp.concatenate([jnp.zeros(1), done_idxs + 1], axis=0)
 
-        # --- Compute subtrajectory indices without intermediate episode resets ---
-        any_done = jax.jit(partial(jnp.convolve, mode="valid"))(
-            a=jnp.ones(args.trajectory_length - 1), v=flat_done[:-1]
-        )
-        valid_start_idxs = jnp.argwhere(any_done == 0).squeeze(axis=-1)
+            # --- Compute subtrajectory indices without intermediate episode resets ---
+            any_done = jax.jit(partial(jnp.convolve, mode="valid"))(
+                a=jnp.ones(args.trajectory_length - 1), v=flat_done[:-1]
+            )
+            valid_start_idxs = jnp.argwhere(any_done == 0).squeeze(axis=-1)
 
-        # --- Compute subtrajecories ending with terminal or timeout ---
-        flat_term = jnp.concatenate([ep["terminals"] for ep in eps], axis=0)
-        term_idxs = jnp.argwhere(flat_term).squeeze(axis=-1)
-        flat_timeout = jnp.concatenate([ep["timeouts"] for ep in eps], axis=0)
-        timeout_idxs = jnp.argwhere(flat_timeout).squeeze(axis=-1)
-        print(
-            f"{len(term_idxs)} terminal, {len(timeout_idxs)} timeout flags found",
-            end="...",
-        )
-        term_idxs -= args.trajectory_length - 1
-        timeout_idxs -= args.trajectory_length - 1
+            # --- Compute subtrajecories ending with terminal or timeout ---
+            flat_term = jnp.concatenate([ep["terminals"] for ep in eps], axis=0)
+            term_idxs = jnp.argwhere(flat_term).squeeze(axis=-1)
+            flat_timeout = jnp.concatenate([ep["timeouts"] for ep in eps], axis=0)
+            timeout_idxs = jnp.argwhere(flat_timeout).squeeze(axis=-1)
+            print(
+                f"{len(term_idxs)} terminal, {len(timeout_idxs)} timeout flags found",
+                end="...",
+            )
+            term_idxs -= args.trajectory_length - 1
+            timeout_idxs -= args.trajectory_length - 1
 
-        # --- Compute subtrajectory indices ---
-        # Add strided subtrajectories
-        start_idxs = set(valid_start_idxs[:: args.dataset_stride].tolist())
-        # Add the start and end (final step terminal) of episodes
-        start_idxs |= set(valid_start_idxs.tolist()) & set(term_idxs.tolist())
-        start_idxs |= set(valid_start_idxs.tolist()) & set(init_idxs.tolist())
-        # Remove subtrajectories ending in timeout
-        start_idxs -= set(timeout_idxs.tolist())
-        # Compute index array from list of start positions
-        start_idxs = jnp.array(list(start_idxs), dtype=jnp.int32)
-        subtraj_idxs = jax.jit(
-            jax.vmap(lambda x: jnp.arange(args.trajectory_length) + x)
-        )(start_idxs)
+            # --- Compute subtrajectory indices ---
+            # Add strided subtrajectories
+            start_idxs = set(valid_start_idxs[:: args.dataset_stride].tolist())
+            # Add the start and end (final step terminal) of episodes
+            start_idxs |= set(valid_start_idxs.tolist()) & set(term_idxs.tolist())
+            start_idxs |= set(valid_start_idxs.tolist()) & set(init_idxs.tolist())
+            # Remove subtrajectories ending in timeout
+            start_idxs -= set(timeout_idxs.tolist())
+            # Compute index array from list of start positions
+            start_idxs = jnp.array(list(start_idxs), dtype=jnp.int32)
+            subtraj_idxs = jax.jit(
+                jax.vmap(lambda x: jnp.arange(args.trajectory_length) + x)
+            )(start_idxs)
+        else:
+            # --- Remove timeout transitions ---
+            flat_timeout = jnp.concatenate([ep["timeouts"] for ep in eps], axis=0)
+            subtraj_idxs = jnp.argwhere(~flat_timeout).squeeze(axis=-1)
 
         # --- Construct subtrajectories from indices ---
         def _construct_tensor(data, add_singleton=False):

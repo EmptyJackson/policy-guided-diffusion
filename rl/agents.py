@@ -74,23 +74,11 @@ def make_train_step(args, network, aux_networks):
     raise ValueError(f"Unknown agent {args.agent}.")
 
 
-def get_total_num_steps(args):
-    num_minibatch_updates = 1
-    if args.offline:
-        if args.offline_minibatch_size is not None:
-            num_minibatch_updates = (
-                args.offline_batch_size / args.offline_minibatch_size
-            )
-    else:
-        num_minibatch_updates = args.online_num_minibatches
-    return int(num_minibatch_updates * args.num_train_steps)
-
-
 def make_lr_schedule(args):
     init_lr = args.lr
     if args.lr_schedule == "constant":
         return init_lr
-    total_steps = get_total_num_steps(args)
+    total_steps = args.num_train_steps
     warmup_steps = total_steps // 10
     if args.lr_schedule == "cosine":
         return optax.cosine_decay_schedule(

@@ -7,7 +7,7 @@
         <img src="https://img.shields.io/badge/code%20style-black-000000.svg" /></a>
     <a href= "https://github.com/EmptyJackson/policy-guided-diffusion/blob/main/LICENSE">
         <img src="https://img.shields.io/badge/license-MIT-blue.svg" /></a>
-    <a href= "">
+    <a href= "https://twitter.com/JacksonMattT/status/1778090124862959733">
         <img src="https://img.shields.io/badge/Twitter-1DA1F2.svg" /></a>
 </p>
 
@@ -46,7 +46,15 @@ echo [KEY] > setup/wandb_key
 
 ### Launching experiments
 ```
-./run_gpu.sh [GPU index] python3.9 train_diffusion.py [args]
+./run_docker.sh [GPU index] python3.9 [train_script] [args]
+```
+Diffusion training example:
+```
+./run_docker.sh 0 python3.9 train_diffusion.py --log --wandb_project diff --wandb_team flair --dataset_name walker2d-medium-v2
+```
+Agent training example:
+```
+./run_docker.sh 6 python3.9 train_agent.py --log --wandb_project agents --wandb_team flair --dataset_name walker2d-medium-v2 --agent iql
 ```
 
 # Citation

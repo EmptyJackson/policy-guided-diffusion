@@ -12,7 +12,7 @@ def make_train_step(args, network, aux_networks):
     def _update_step(train_state, aux_train_states, traj_batch, rng):
         q_train_state, q_target_train_state, value_train_state = aux_train_states
         traj_batch = jax.tree_util.tree_map(
-            lambda x: x.reshape((-1,) + x.shape[2:]), traj_batch
+            lambda x: x.reshape((-1, x.shape[-1])), traj_batch
         )
 
         # --- Update target networks ---
@@ -74,7 +74,7 @@ def make_train_step(args, network, aux_networks):
 
         def _actor_loss_function(params):
             def _compute_loss(transition, exp_adv):
-                pi, _ = network.apply(params, transition.obs)
+                pi = network.apply(params, transition.obs)
                 bc_losses = -pi.log_prob(transition.action)
                 return exp_adv * bc_losses.sum()
 

@@ -40,7 +40,6 @@ class OfflineRolloutGenerator(DatasetRolloutGenerator):
         args,
         obs_shape,
         action_dim,
-        discrete_actions,
         action_lims,
         num_env_steps,
         agent_apply_fn=None,
@@ -50,15 +49,10 @@ class OfflineRolloutGenerator(DatasetRolloutGenerator):
         self.agent_apply_fn = agent_apply_fn
         self.obs_shape = obs_shape
         self.action_dim = action_dim
-        self.discrete_actions = discrete_actions
         self.action_lims = action_lims
 
-        args.trajectory_length = 2
-        args.dataset_stride = 2
-        self.trajectory_length = 2
-        transitions = load_dataset(
-            args, normalize=False, normalize_reward=args.normalize_reward
-        )[0]
+        args.trajectory_length = 1
+        transitions = load_dataset(args, normalize=False)[0]
         # Flatten dataset
         transitions = jax.tree_map(lambda x: x.reshape((-1, x.shape[-1])), transitions)
         self.obs_stats = {
@@ -66,7 +60,7 @@ class OfflineRolloutGenerator(DatasetRolloutGenerator):
             "std": transitions.obs.std(axis=0),
         }
         if batch_size is None:
-            batch_size = args.offline_batch_size
+            batch_size = args.batch_size
         super().__init__(transitions, batch_size)
 
     def set_apply_fn(self, agent_apply_fn):

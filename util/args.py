@@ -8,17 +8,13 @@ def parse_diffusion_args(cmd_args=sys.argv[1:]):
     parser.add_argument("--debug_nans", action="store_true")
 
     # Experiment
+    parser.add_argument("--dataset_name", type=str, help="Offline dataset name",)
     parser.add_argument("--seed", type=int, default=0, help="Random seed")
     parser.add_argument(
         "--num_epochs", type=int, default=10000, help="Number of epochs to train for"
     )
     parser.add_argument(
         "--eval_rate", type=int, default=50, help="Number of steps per evaluation"
-    )
-    parser.add_argument(
-        "--offline_dataset_fname",
-        type=str,
-        help="Offline dataset filename",
     )
 
     # Dataset
@@ -153,8 +149,8 @@ def parse_diffusion_args(cmd_args=sys.argv[1:]):
     # Logging
     parser.add_argument("--log", action="store_true")
     parser.add_argument("--save_checkpoint", action="store_true")
-    parser.add_argument("--wandb_project", type=str, help="WandB project")
-    parser.add_argument("--wandb_team", type=str, help="WandB team")
+    parser.add_argument("--wandb_project", type=str, default=None, help="WandB project")
+    parser.add_argument("--wandb_team", type=str, default=None, help="WandB team")
     parser.add_argument("--wandb_group", type=str, default="debug", help="WandB group")
 
     args, rest_args = parser.parse_known_args(cmd_args)
@@ -170,11 +166,12 @@ def parse_agent_args(cmd_args=sys.argv[1:]):
     parser.add_argument("--debug_nans", action="store_true")
 
     # Experiment
+    parser.add_argument("--dataset_name", type=str, help="Offline dataset name",)
     parser.add_argument("--seed", type=int, default=0, help="Random seed")
     parser.add_argument(
         "--num_train_steps",
         type=int,
-        default=100,
+        default=1_000_000,
         help="Number of epochs or agent train steps",
     )
     parser.add_argument(
@@ -183,22 +180,13 @@ def parse_agent_args(cmd_args=sys.argv[1:]):
         default=1,
         help="Number of train steps between evaluations",
     )
-
-    # Environment
-    parser.add_argument("--env_name", type=str, default=None, help="Environment name")
     parser.add_argument(
-        "--num_env_workers", type=int, default=16, help="Number of environment workers"
+        "--num_env_workers",
+        type=int,
+        default=16,
+        help="Number of environment workers for evaluation",
     )
-
-    # Offline learning
-    parser.add_argument("--offline", action="store_true")
-    parser.add_argument("--offline_dataset_fname", type=str, default="cartpole_128.pkl")
-    parser.add_argument("--offline_batch_size", type=int, default=256)
-    parser.add_argument(
-        "--normalize_reward",
-        action="store_true",
-        help="Normalize reward for offline or synthetic experience",
-    )
+    parser.add_argument("--batch_size", type=int, default=256)
 
     # Synthetic experience
     parser.add_argument("--synthetic_experience", action="store_true")
@@ -250,7 +238,12 @@ def parse_agent_args(cmd_args=sys.argv[1:]):
     )
 
     # Agent
-    parser.add_argument("--agent", type=str, default="iql", help="Agent type")
+    parser.add_argument(
+        "--agent",
+        type=str,
+        default="iql",
+        choices=["iql", "td3_bc"],
+        help="Agent type")
     parser.add_argument(
         "--activation",
         type=str,
@@ -270,6 +263,12 @@ def parse_agent_args(cmd_args=sys.argv[1:]):
     )
     parser.add_argument(
         "--entropy_coef", type=float, default=0.01, help="Entropy coefficient"
+    )
+    parser.add_argument(
+        "--polyak_step_size",
+        type=float,
+        default=0.005,
+        help="Target update step size",
     )
 
     # Optimization
@@ -307,18 +306,16 @@ def parse_agent_args(cmd_args=sys.argv[1:]):
 
     # Logging
     parser.add_argument("--log", action="store_true")
+    parser.add_argument("--wandb_project", default=None, type=str, help="WandB project")
+    parser.add_argument("--wandb_team", default=None, type=str, help="WandB team")
     parser.add_argument("--wandb_group", type=str, default="debug", help="Wandb group")
 
     args, rest_args = parser.parse_known_args(cmd_args)
     if rest_args:
         raise ValueError(f"Unknown args {rest_args}")
 
-    assert not (
-        args.offline and args.synthetic_experience
-    ), "Can't do both offline and synthetic experience"
-    if args.synthetic_experience:
-        assert (
-            args.num_train_steps % args.synth_dataset_lifetime == 0
-        ), "Number of train steps must be a multiple of the synthetic dataset lifetime"
-    args.env_name = args.offline_dataset_fname
+    assert (
+        not args.synthetic_experience or args.num_train_steps % args.synth_dataset_lifetime == 0
+    ), "Number of train steps must be a multiple of the synthetic dataset lifetime"
+    args.env_name = args.dataset_name
     return args

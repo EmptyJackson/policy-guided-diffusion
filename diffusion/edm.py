@@ -104,7 +104,6 @@ def sample_trajectory(
     policy_guidance_delay_steps=0,
     policy_guidance_cosine_coeff=0.0,
     normalize_action_guidance=True,
-    normalize_reward=False,
     denoised_guidance=False,
     det_guidance=False,
     agent_apply_fn=None,
@@ -270,11 +269,9 @@ def sample_trajectory(
     )
 
     # --- Construct rollout ---
-    rollout, next_obs = construct_rollout(
+    return construct_rollout(
         denoised_traj,
         denoiser_norm_stats,
-        normalize_reward,
         obs_dim,
         action_dim,
     )
-    return rollout, next_obs

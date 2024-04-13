@@ -66,7 +66,6 @@ def make_train_step(args):
 
 def make_sample_fn(
     args,
-    normalize_reward,
     normalize_action_guidance,
     denoised_guidance,
     det_guidance,
@@ -79,6 +78,5 @@ def make_sample_fn(
             normalize_action_guidance=normalize_action_guidance,
             denoised_guidance=denoised_guidance,
             det_guidance=det_guidance,
-            normalize_reward=normalize_reward,
         )
     raise ValueError(f"Unknown diffusion method {args.diffusion_method}.")
