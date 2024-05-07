@@ -16,3 +16,4 @@ jax[cuda12_pip]==0.4.16
 cython<3
 d4rl==1.1
 dm-control==1.0.5
+scipy==1.12.0
