@@ -30,7 +30,6 @@ class SyntheticRolloutGenerator(DatasetRolloutGenerator):
         self.action_dim = action_dim
         self.action_lims = action_lims
         self.policy_guidance_coeff = args.policy_guidance_coeff
-        self.policy_guidance_delay_steps = args.policy_guidance_delay_steps
         self.policy_guidance_cosine_coeff = args.policy_guidance_cosine_coeff
         self.num_synth_workers = args.num_synth_workers
         self.num_synth_rollouts = args.num_synth_rollouts
@@ -55,7 +54,6 @@ class SyntheticRolloutGenerator(DatasetRolloutGenerator):
             action_dim=self.action_dim,
             denoiser_norm_stats=self.denoiser_norm_stats,
             policy_guidance_coeff=self.policy_guidance_coeff,
-            policy_guidance_delay_steps=self.policy_guidance_delay_steps,
             policy_guidance_cosine_coeff=self.policy_guidance_cosine_coeff,
         )
 
