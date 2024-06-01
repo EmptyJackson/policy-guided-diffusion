@@ -221,7 +221,7 @@ class MixedRolloutGenerator:
             flattened_real_batch = self.real_rollout_gen.batch_rollout(_rng)
             flattened_batches.append(flattened_real_batch)
         traj_batch = jax.tree_map(
-            lambda *x: jnp.concatenate([batch for batch in x], axis=-2),
+            lambda *x: jnp.concatenate([batch for batch in x], axis=0),
             *flattened_batches,
         )
         return jax.tree_map(lambda x: jnp.swapaxes(x, 0, 1), traj_batch)
