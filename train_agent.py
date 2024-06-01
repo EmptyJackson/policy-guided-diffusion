@@ -126,7 +126,7 @@ def make_train(args):
             if (
                 args.synthetic_experience
                 and step_idx % args.synth_dataset_lifetime == 0
-                and step_idx != args.num_train_steps - args.synth_dataset_lifetime
+                and step_idx != 0
             ):
                 rng, _rng = jax.random.split(rng)
                 rollout_gen.update_synthetic_dataset(_rng, train_state.params)
@@ -156,13 +156,15 @@ def train_agents(args):
         # --- Log step metrics ---
         for step in steps:
             # Log nearest step with return value
-            log({
-                "episode_return": returns[step],
-                "episode_score": scores[step],
-                "step": step,
-                "num_updates": num_updates[step],
-                **loss[step * args.eval_rate],
-            })
+            log(
+                {
+                    "episode_return": returns[step],
+                    "episode_score": scores[step],
+                    "step": step,
+                    "num_updates": num_updates[step],
+                    **loss[step * args.eval_rate],
+                }
+            )
 
 
 def main(cmd_args=sys.argv[1:]):
