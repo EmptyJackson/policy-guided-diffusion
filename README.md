@@ -3,19 +3,21 @@
 <p align="center">
     <a href= "https://arxiv.org/abs/2404.06356">
         <img src="https://img.shields.io/badge/arXiv-2404.06356-b31b1b.svg" /></a>
-    <a href= "https://github.com/psf/black">
+<!--     <a href= "https://github.com/psf/black">
         <img src="https://img.shields.io/badge/code%20style-black-000000.svg" /></a>
     <a href= "https://github.com/EmptyJackson/policy-guided-diffusion/blob/main/LICENSE">
-        <img src="https://img.shields.io/badge/license-MIT-blue.svg" /></a>
+        <img src="https://img.shields.io/badge/license-MIT-blue.svg" /></a> -->
     <a href= "https://twitter.com/JacksonMattT/status/1778090124862959733">
         <img src="https://img.shields.io/badge/Twitter-1DA1F2.svg" /></a>
+    <a href= "https://api.wandb.ai/links/flair/jonpqc2o">
+        <img src="https://img.shields.io/badge/Weights_&_Biases-FFCC33?style=for-the-badge&logo=WeightsAndBiases&logoColor=black" height=20 /></a>
 </p>
 
 <p align="center">
     <img src="media/demo.gif" alt="animated" width="75%"/>
 </p>
 
-The official implementation of *Policy-Guided Diffusion* (https://arxiv.org/abs/2404.06356) - built by [Matthew Jackson](https://github.com/EmptyJackson) and [Michael Matthews](https://github.com/MichaelTMatthews).
+The official implementation of *[Policy-Guided Diffusion](https://arxiv.org/abs/2404.06356)* - built by [Matthew Jackson](https://github.com/EmptyJackson) and [Michael Matthews](https://github.com/MichaelTMatthews).
 
 <!-- [[ArXiv](https://arxiv.org/abs/2404.06356) | [NeurIPS RoboLearn Workshop](https://neurips.cc/virtual/2023/77263) | [Twitter]()] -->
 
@@ -25,6 +27,8 @@ The official implementation of *Policy-Guided Diffusion* (https://arxiv.org/abs/
    * Runs on the **D4RL** benchmark.
 
 Diffusion and agent training is implemented entirely in Jax, with extensive JIT-compilation and parallelization!
+
+**Update (28/06/24):** Added [WandB report](https://api.wandb.ai/links/flair/jonpqc2o) with diffusion and agent model training logs.
 
 <!-- [**Running experiments**](#running-experiments) | [**Citation**](#cite) -->
 
