@@ -32,7 +32,10 @@ def get_agent(args, action_dim, action_lims, obs_stats=None):
         )
         return (
             TanhDeterministicActor(
-                action_dim, activation=args.activation, action_lims=action_lims
+                action_dim,
+                activation=args.activation,
+                action_lims=action_lims,
+                obs_stats=obs_stats,
             ),
             auxilary_networks,
         )
