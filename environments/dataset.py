@@ -1,5 +1,8 @@
 import jax
 import jax.numpy as jnp
+import gym
+import d4rl
+
 from functools import partial
 
 from util import *
@@ -27,9 +30,6 @@ def load_dataset(args, normalize, val_split=0.0):
 
 def _load_d4rl_data(args):
     """Load D4RL dataset in Jax Numpy format, split on done flags."""
-    import gym
-    import d4rl
-
     # --- Load data and convert to Jax Numpy ---
     dataset = gym.make(args.dataset_name).get_dataset()
     trajs = {
@@ -38,7 +38,7 @@ def _load_d4rl_data(args):
     }
     trajs["next_observations"] = dataset["observations"][1:]
     trajs["done"] = jnp.logical_or(dataset["terminals"][:-1], dataset["timeouts"][:-1])
-    trajs = jax.tree_map(lambda x: jnp.array(x), trajs)
+    trajs = jax.tree_map(jnp.array, trajs)
 
     # --- Split data on terminal or timeout flags ---
     split_idxs = jnp.argwhere(trajs["done"]).squeeze() + 1

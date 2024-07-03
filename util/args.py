@@ -8,7 +8,11 @@ def parse_diffusion_args(cmd_args=sys.argv[1:]):
     parser.add_argument("--debug_nans", action="store_true")
 
     # Experiment
-    parser.add_argument("--dataset_name", type=str, help="Offline dataset name",)
+    parser.add_argument(
+        "--dataset_name",
+        type=str,
+        help="Offline dataset name",
+    )
     parser.add_argument("--seed", type=int, default=0, help="Random seed")
     parser.add_argument(
         "--num_epochs", type=int, default=10000, help="Number of epochs to train for"
@@ -166,7 +170,11 @@ def parse_agent_args(cmd_args=sys.argv[1:]):
     parser.add_argument("--debug_nans", action="store_true")
 
     # Experiment
-    parser.add_argument("--dataset_name", type=str, help="Offline dataset name",)
+    parser.add_argument(
+        "--dataset_name",
+        type=str,
+        help="Offline dataset name",
+    )
     parser.add_argument("--seed", type=int, default=0, help="Random seed")
     parser.add_argument(
         "--num_train_steps",
@@ -239,11 +247,8 @@ def parse_agent_args(cmd_args=sys.argv[1:]):
 
     # Agent
     parser.add_argument(
-        "--agent",
-        type=str,
-        default="iql",
-        choices=["iql", "td3_bc"],
-        help="Agent type")
+        "--agent", type=str, default="iql", choices=["iql", "td3_bc"], help="Agent type"
+    )
     parser.add_argument(
         "--activation",
         type=str,
@@ -272,7 +277,7 @@ def parse_agent_args(cmd_args=sys.argv[1:]):
     )
 
     # Optimization
-    parser.add_argument("--lr", type=float, default=1e-3, help="Learning rate")
+    parser.add_argument("--lr", type=float, default=3e-4, help="Learning rate")
     parser.add_argument("--lr_schedule", type=str, default="constant")
 
     # TD3+BC
@@ -315,7 +320,8 @@ def parse_agent_args(cmd_args=sys.argv[1:]):
         raise ValueError(f"Unknown args {rest_args}")
 
     assert (
-        not args.synthetic_experience or args.num_train_steps % args.synth_dataset_lifetime == 0
+        not args.synthetic_experience
+        or args.num_train_steps % args.synth_dataset_lifetime == 0
     ), "Number of train steps must be a multiple of the synthetic dataset lifetime"
     args.env_name = args.dataset_name
     return args
