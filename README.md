@@ -40,12 +40,12 @@ Diffusion and agent training is executed with `python3 train_diffusion.py` and `
 ### Docker installation
 1. Build docker image
 ```
-cd docker & ./build.sh & cd ..
+cd docker && ./build.sh && cd ..
 ```
 
-2. (To enable WandB logging) Add your [account key](https://wandb.ai/authorize) to `setup/wandb_key`:
+2. (To enable WandB logging) Add your [account key](https://wandb.ai/authorize) to `docker/wandb_key`:
 ```
-echo [KEY] > setup/wandb_key
+echo [KEY] > docker/wandb_key
 ```
 
 ### Launching experiments
